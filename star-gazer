@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+// var process = require('process');
+
+var ssh2 = require('ssh2');
+var yaml = require('js-yaml');
+
+
+
+var config_file = 'star-gazer.yaml';
+
+
+var config_data;
+if (fs.existsSync(config_file)) {
+	config_data = yaml.safeLoad(fs.readFileSync(config_file, 'utf8'));
+} else {
+	console.log("warning: no config file found at '" + config_file + "'");
+	config_data = {};
+}
+
+
+console.log("got config_data: " + config_data);
+
+config_data = {
+	credentials: [
+		{
+			key: 15,
+			username: 'asdf',
+		},
+		{
+			key: 'qwer',
+			username: 'qwerty',
+		},
+	],
+};
+
+fs.writeFileSync(config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+
+
+
+var conn = new ssh2.Client();
+conn.on('ready', function() {
+	console.log('connected...');
+	conn.shell(function(err, stream) {
+		if (err) throw err;
+		console.log('stream opened');
+
+		stream.pipe(process.stdout);
+		process.stdin.pipe(stream);
+
+		stream.on('close', function() {
+			console.log('stream closed');
+			conn.end();
+			process.exit(0);
+		});
+	});
+}).connect({
+	host: '192.168.11.2',
+	port: 22,
+	username: 'dmin',
+	password: 'password'
+	// privateKey: require('fs').readFileSync('/here/is/my/key')
+});
+
+
