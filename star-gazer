@@ -12,6 +12,7 @@ function StarGazer() {
 	this.config_file = 'star-gazer-credentials.yaml';
 	this.encrypted_config_file = 'star-gazer-credentials.yaml.aes';
 	this.config_encryption_algorithm = 'aes-256-ctr';
+	this.config_hmac_algorithm = 'sha256';
 
 	this.is_config_encrypted = undefined;
 	this.config_password = undefined;
@@ -149,14 +150,25 @@ StarGazer.prototype.encrypt_text = function (plaintext) {
 	var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
 	ciphertext += cipher.final('base64');
 	return ciphertext;
-}
+};
+
+StarGazer.prototype.mac_text = function(plaintext) {
+	var hmac = crypto.createHmac(this.config_hmac_algorithm, this.config_password);
+	hmac.update(plaintext);
+	return hmac.digest('hex');
+};
 
 StarGazer.prototype.decrypt_text = function (ciphertext) {
 	var decipher = crypto.createDecipher(this.config_encryption_algorithm, this.config_password);
 	var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
 	plaintext += decipher.final('utf8');
 	return plaintext;
-}
+};
+
+StarGazer.prototype.verify_mac_text = function(plaintext, mac) {
+	var computed = this.mac_text(plaintext);
+	return mac === computed;
+};
 
 StarGazer.prototype.get_user_config_password = function(callback) {
 	var self = this;
@@ -189,9 +201,18 @@ StarGazer.prototype.load_config = function(callback) {
 		var self = this;
 		this.get_user_config_password(function () {
 			var data = fs.readFileSync(self.encrypted_config_file, 'ascii');
-			data = self.decrypt_text(data, self.config_password);
-			var config_data = yaml.safeLoad(data);
-			callback(self.instantiate_config(config_data));
+			var data_pieces = data.split('|', 2);
+			var ciphertext = data_pieces[0];
+			var mac = data_pieces[1];
+
+			if (self.verify_mac_text(ciphertext, mac)) {
+				data = self.decrypt_text(data, self.config_password);
+				var config_data = yaml.safeLoad(data);
+				callback(self.instantiate_config(config_data));
+			} else {
+				console.error('error: invalid config MAC (maybe your password is incorrect?)');
+				callback(false);
+			}
 		});
 	} else {
 		console.log("warning: no config file found at '" + this.config_file + "'");
@@ -212,7 +233,6 @@ StarGazer.prototype.instantiate_config = function(config_data) {
 		return true;
 	} else {
 		console.error("error: malformed config (missing credentials-manager field)");
-		console.error("\t(maybe you misspelled your password?)");
 
 		return false;
 	}
@@ -229,8 +249,10 @@ StarGazer.prototype.store_config = function() {
 	// write the config file
 	if (this.is_config_encrypted) {
 		var data = yaml.safeDump(config_data);
-		data = this.encrypt_text(data);
-		fs.writeFileSync(this.encrypted_config_file, data, { 'encoding': 'ascii' });
+		ciphertext = this.encrypt_text(data);
+		var mac = this.mac_text(ciphertext);
+		var file_data = ciphertext + "|" + mac;
+		fs.writeFileSync(this.encrypted_config_file, file_data, { 'encoding': 'ascii' });
 	} else {
 		fs.writeFileSync(this.config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
 	}
