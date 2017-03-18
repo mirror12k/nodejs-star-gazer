@@ -20,47 +20,66 @@ if (fs.existsSync(config_file)) {
 }
 
 
-console.log("got config_data: " + config_data);
 
-config_data = {
-	credentials: [
-		{
-			key: 15,
-			username: 'asdf',
-		},
-		{
-			key: 'qwer',
-			username: 'qwerty',
-		},
-	],
-};
-
-fs.writeFileSync(config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+// fs.writeFileSync(config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
 
 
+function connect_ssh_client(credentials) {
+	var conn = new ssh2.Client();
+	conn.on('ready', function() {
+		console.log('connected!');
+		conn.shell(function(err, stream) {
+			if (err) throw err;
+			console.log('stream opened');
 
-var conn = new ssh2.Client();
-conn.on('ready', function() {
-	console.log('connected...');
-	conn.shell(function(err, stream) {
-		if (err) throw err;
-		console.log('stream opened');
+			stream.pipe(process.stdout);
+			process.stdin.pipe(stream);
 
-		stream.pipe(process.stdout);
-		process.stdin.pipe(stream);
-
-		stream.on('close', function() {
-			console.log('stream closed');
-			conn.end();
-			process.exit(0);
+			stream.on('close', function() {
+				console.log('stream closed');
+				conn.end();
+				process.exit(0);
+			});
 		});
+	}).connect({
+		host: credentials.host,
+		port: credentials.port,
+		username: credentials.username,
+		password: credentials.password,
+		// privateKey: require('fs').readFileSync('/here/is/my/key')
 	});
-}).connect({
-	host: '192.168.11.2',
-	port: 22,
-	username: 'dmin',
-	password: 'password'
-	// privateKey: require('fs').readFileSync('/here/is/my/key')
-});
+}
+
+function list_credentials() {
+	for (var server_name in config_data.credentials) {
+		var credentials = config_data.credentials[server_name];
+		console.log("[" + credentials.credential_type + "] " + server_name);
+		console.log("\t" + credentials.host + ":" + credentials.port);
+	}
+}
+function open_connection(name) {
+	var credentials = config_data.credentials[name];
+	if (credentials !== undefined) {
+		console.log('connecting to ' + name + '...')
+		connect_ssh_client(credentials);
+	} else {
+		console.log("error: no credentials found for '" + name + "'");
+	}
+}
+
+
+if (process.argv.length < 3) {
+	console.log('usage:\
+		star-gazer <list | connect>');
+} else {
+	var command = process.argv[2];
+	if (command === 'list') {
+		list_credentials();
+	} else if (command === 'connect') {
+		open_connection(process.argv[3]);
+	} else {
+		console.log("unknown command: " + command);
+	}
+}
 
 
