@@ -8,11 +8,27 @@ var yaml = require('js-yaml');
 
 function StarGazer() {
 	this.config_file = 'star-gazer-credentials.yaml';
-	this.server_types = {
-		ssh: require('./plugins/ssh/ssh'),
-	};
+	this.server_types = {};
+	this.plugins = {};
 }
 
+StarGazer.prototype.load_plugins = function() {
+	var plugin_directories = fs.readdirSync('./plugins');
+	for (var i = 0; i < plugin_directories.length; i++) {
+		var plugin_name = plugin_directories[i];
+		console.log('loading plugin ', plugin_name);
+		var plugin = require('./plugins/' + plugin_name + '/' + plugin_name);
+		this.plugins[plugin_name] = plugin;
+	}
+
+	for (var plugin_name in this.plugins) {
+		this.plugins[plugin_name].initialize(this);
+	}
+};
+
+StarGazer.prototype.register_server_type = function(server_type, server_class) {
+	this.server_types[server_type] = server_class;
+};
 
 StarGazer.prototype.load_config = function(filepath) {
 	// defaults to using .config_file as the filepath
@@ -107,6 +123,7 @@ StarGazer.prototype.remove_credentials = function (server_name) {
 
 
 var gazer = new StarGazer();
+gazer.load_plugins();
 gazer.load_config();
 
 
