@@ -9,14 +9,21 @@ var yaml = require('js-yaml');
 function StarGazer() {
 	this.config_file = 'star-gazer-credentials.yaml';
 	this.server_types = {};
+	this.commands = {};
+
 	this.plugins = {};
+
+	this.register_command('list', 0, this.list_credentials.bind(this));
+	this.register_command('connect', 1, this.open_connection.bind(this));
+	this.register_command('add', 2, this.command_add_credentials.bind(this));
+	this.register_command('remove', 1, this.command_remove_credentials.bind(this));
 }
 
 StarGazer.prototype.load_plugins = function() {
 	var plugin_directories = fs.readdirSync('./plugins');
 	for (var i = 0; i < plugin_directories.length; i++) {
 		var plugin_name = plugin_directories[i];
-		console.log('loading plugin ', plugin_name);
+		console.log('loading plugin', plugin_name);
 		var plugin = require('./plugins/' + plugin_name + '/' + plugin_name);
 		this.plugins[plugin_name] = plugin;
 	}
@@ -28,6 +35,77 @@ StarGazer.prototype.load_plugins = function() {
 
 StarGazer.prototype.register_server_type = function(server_type, server_class) {
 	this.server_types[server_type] = server_class;
+};
+
+StarGazer.prototype.register_command = function(command_name, arg_count, callback) {
+	this.commands[command_name] = { arg_count: arg_count, callback: callback };
+};
+
+StarGazer.prototype.parse_opts = function(opts) {
+	var parsed_opts = {};
+	for (var i = 0; i < opts.length; i++) {
+		var key_value = opts[i].split("=", 2);
+		if (key_value[1] === undefined)
+			key_value[1] = true;
+		parsed_opts[key_value[0]] = key_value[1];
+	}
+
+	return parsed_opts;
+};
+
+StarGazer.prototype.run_command = function(command, args) {
+	if (this.commands[command] !== undefined) {
+		var arg_count = this.commands[command].arg_count;
+		var command_args = args.slice(0, arg_count);
+		var opts = this.parse_opts(args.slice(arg_count));
+		command_args[arg_count] = opts;
+
+		this.commands[command].callback.apply(undefined, command_args);
+	} else {
+		console.error("error: unknown command " + command);
+	}
+};
+
+
+
+
+StarGazer.prototype.list_credentials = function () {
+	if (Object.keys(this.config.credentials).length === 0) {
+		console.log("no credentials in store!");
+	} else {
+		console.log("listed credentials:");
+		for (var server_name in this.config.credentials) {
+			var credentials = this.config.credentials[server_name];
+			console.log(server_name + " [" + credentials.server_type + "]");
+			credentials.print_info();
+		}
+	}
+};
+
+StarGazer.prototype.command_add_credentials = function (server_type, server_name, opts) {
+	console.log("got credentials: %j", opts);
+	
+	if (gazer.server_types[server_type] !== undefined) {
+		opts.server_type = server_type;
+		var credentials = gazer.server_types[server_type].create_new(server_name, opts);
+		
+		if (credentials !== undefined && gazer.add_credentials(server_name, credentials)) {
+			gazer.store_config();
+			console.log('added credentials to store');
+		} else {
+			console.error("invalid credentials");
+		}
+	} else {
+		console.error("error: no such server type registered '" + server_type + "'");
+	}
+};
+
+StarGazer.prototype.command_remove_credentials = function (server_name) {
+	if (this.remove_credentials(server_name)) {
+		this.store_config();
+		console.log("removed credentials from store");
+
+	}
 };
 
 StarGazer.prototype.load_config = function(filepath) {
@@ -68,22 +146,6 @@ StarGazer.prototype.store_config = function(filepath) {
 };
 
 
-
-
-
-
-StarGazer.prototype.list_credentials = function () {
-	if (Object.keys(this.config.credentials).length === 0) {
-		console.log("no credentials in store!");
-	} else {
-		console.log("listed credentials:");
-		for (var server_name in this.config.credentials) {
-			var credentials = this.config.credentials[server_name];
-			console.log(server_name + " [" + credentials.server_type + "]");
-			credentials.print_info();
-		}
-	}
-};
 
 
 StarGazer.prototype.get_credentials = function (server_name) {
@@ -129,54 +191,12 @@ gazer.load_config();
 
 if (process.argv.length < 3) {
 	console.log('usage:\n\
-		star-gazer init\n\
 		star-gazer list\n\
 		star-gazer connect <server-name>\n\
 		star-gazer add <server-type> <server-name> [opt=val ...]\n\
 		star-gazer remove <server-name>\n');
 } else {
-	var command = process.argv[2];
-	if (command === 'init') {
-		gazer.store_config();
-		console.log("initialized a " + config_file + " file");
-
-	} else if (command === 'list') {
-		gazer.list_credentials();
-
-	} else if (command === 'connect') {
-		gazer.open_connection(process.argv[3]);
-
-	} else if (command === 'add') {
-		var server_type = process.argv[3];
-		var server_name = process.argv[4];
-
-		var credentials = { server_type: server_type };
-		for (var i = 5; i < process.argv.length; i++) {
-			var arg = process.argv[i];
-			var key_value = arg.split("=", 2);
-			if (key_value[1] === undefined)
-				key_value[1] = true;
-			credentials[key_value[0]] = key_value[1];
-		}
-		console.log("got credentials: %j", credentials);
-		
-		if (gazer.server_types[server_type] !== undefined) {
-			var credentials_object = gazer.server_types[server_type].create_new(server_name, credentials);
-			gazer.add_credentials(server_name, credentials_object);
-			gazer.store_config();
-			console.log('wrote new credentials to store');
-		} else {
-			console.error("error: no such server type registered '" + server_type + "'");
-		}
-
-	} else if (command === 'remove') {
-		gazer.remove_credentials(process.argv[3]);
-		gazer.store_config();
-		console.log('deleted credentials from store');
-
-	} else {
-		console.log("unknown command: " + command);
-	}
+	gazer.run_command(process.argv[2], process.argv.slice(3));
 }
 
 

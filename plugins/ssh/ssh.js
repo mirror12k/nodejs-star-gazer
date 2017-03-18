@@ -24,10 +24,6 @@ SSHCredentials.from_store = function (server_name, credentials) {
 };
 
 SSHCredentials.create_new = function (server_name, credentials) {
-	if (credentials.port === undefined) {
-		console.log("warning: defaulting to using port 22");
-		credentials.port = 22;
-	}
 	if (credentials.host === undefined) {
 		console.error("error: missing host field in ssh credentials");
 		return;
@@ -39,6 +35,10 @@ SSHCredentials.create_new = function (server_name, credentials) {
 	if (credentials.password === undefined) {
 		console.error("error: missing password field in ssh credentials");
 		return;
+	}
+	if (credentials.port === undefined) {
+		console.log("warning: defaulting to using port 22");
+		credentials.port = 22;
 	}
 	// todo: implement parsing key options
 
