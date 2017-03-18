@@ -8,7 +8,7 @@ var yaml = require('js-yaml');
 
 
 
-var config_file = 'star-gazer.yaml';
+var config_file = 'star-gazer-credentials.yaml';
 
 
 var config_data;
@@ -16,12 +16,11 @@ if (fs.existsSync(config_file)) {
 	config_data = yaml.safeLoad(fs.readFileSync(config_file, 'utf8'));
 } else {
 	console.log("warning: no config file found at '" + config_file + "'");
-	config_data = {};
+	config_data = { credentials: {} };
 }
 
 
 
-// fs.writeFileSync(config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
 
 
 function connect_ssh_client(credentials) {
@@ -51,32 +50,109 @@ function connect_ssh_client(credentials) {
 }
 
 function list_credentials() {
-	for (var server_name in config_data.credentials) {
-		var credentials = config_data.credentials[server_name];
-		console.log("[" + credentials.credential_type + "] " + server_name);
-		console.log("\t" + credentials.host + ":" + credentials.port);
+	if (Object.keys(config_data.credentials).length === 0) {
+		console.log("no credentials in store!");
+	} else {
+		console.log("listed credentials:");
+		for (var server_name in config_data.credentials) {
+			var credentials = config_data.credentials[server_name];
+			console.log(server_name + " [" + credentials.server_type + "]");
+			console.log("\t" + credentials.host + ":" + credentials.port);
+		}
 	}
 }
-function open_connection(name) {
-	var credentials = config_data.credentials[name];
+
+function open_connection(server_name) {
+	var credentials = config_data.credentials[server_name];
 	if (credentials !== undefined) {
-		console.log('connecting to ' + name + '...')
+		console.log('connecting to ' + server_name + '...')
 		connect_ssh_client(credentials);
 	} else {
-		console.log("error: no credentials found for '" + name + "'");
+		console.error("error: no credentials found for '" + server_name + "'");
 	}
 }
+
+function save_credentials() {
+	fs.writeFileSync(config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+}
+
+function add_credentials(server_name, credentials) {
+	if (config_data.credentials[server_name] !== undefined) {
+		console.error("error: a set of credentials already exists under the name '" + server_name + "', use a different server name");
+		return;
+	}
+
+	config_data.credentials[server_name] = credentials;
+	save_credentials();
+	console.log('wrote new credentials to store');
+}
+
+function add_ssh_credentials(server_name, credentials) {
+	if (credentials.port === undefined) {
+		console.log("warning: defaulting to using port 22");
+		credentials.port = 22;
+	}
+	if (credentials.host === undefined) {
+		console.error("error: missing host field in ssh credentials");
+		return;
+	}
+	if (credentials.username === undefined) {
+		console.error("error: missing username field in ssh credentials");
+		return;
+	}
+	if (credentials.password === undefined) {
+		console.error("error: missing password field in ssh credentials");
+		return;
+	}
+	// todo: implement parsing key options
+
+	add_credentials(server_name, credentials);
+}
+
+
+var server_types = {
+	ssh: add_ssh_credentials,
+};
 
 
 if (process.argv.length < 3) {
-	console.log('usage:\
-		star-gazer <list | connect>');
+	console.log('usage:\n\
+		star-gazer init\n\
+		star-gazer list\n\
+		star-gazer connect <server-name>\n\
+		star-gazer add <server-type> <server-name> [opt=val ...]');
 } else {
 	var command = process.argv[2];
-	if (command === 'list') {
+	if (command === 'init') {
+		save_credentials();
+		console.log("initialized a " + config_file + " file");
+
+	} else if (command === 'list') {
 		list_credentials();
+
 	} else if (command === 'connect') {
 		open_connection(process.argv[3]);
+
+	} else if (command === 'add') {
+		var server_type = process.argv[3];
+		var server_name = process.argv[4];
+
+		var credentials = { server_type: server_type };
+		for (var i = 5; i < process.argv.length; i++) {
+			var arg = process.argv[i];
+			var key_value = arg.split("=", 2);
+			if (key_value[1] === undefined)
+				key_value[1] = true;
+			credentials[key_value[0]] = key_value[1];
+		}
+		console.log("got credentials: %j", credentials);
+
+		if (server_types[server_type] !== undefined) {
+			server_types[server_type](server_name, credentials);
+		} else {
+			console.error("error: no such server type registered '" + server_type + "'");
+		}
+
 	} else {
 		console.log("unknown command: " + command);
 	}
