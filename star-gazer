@@ -68,7 +68,7 @@ function open_connection(server_name) {
 		console.log('connecting to ' + server_name + '...')
 		connect_ssh_client(credentials);
 	} else {
-		console.error("error: no credentials found for '" + server_name + "'");
+		console.error("error: no credentials found for '" + server_name + "', use the list command to view your existing credentials");
 	}
 }
 
@@ -85,6 +85,17 @@ function add_credentials(server_name, credentials) {
 	config_data.credentials[server_name] = credentials;
 	save_credentials();
 	console.log('wrote new credentials to store');
+}
+
+function remove_credentials(server_name) {
+	if (config_data.credentials[server_name] === undefined) {
+		console.error("error: no credentials found for '" + server_name + "', use the list command to view your existing credentials");
+		return;
+	}
+
+	delete config_data.credentials[server_name];
+	save_credentials();
+	console.log('deleted credentials from store');
 }
 
 function add_ssh_credentials(server_name, credentials) {
@@ -120,7 +131,8 @@ if (process.argv.length < 3) {
 		star-gazer init\n\
 		star-gazer list\n\
 		star-gazer connect <server-name>\n\
-		star-gazer add <server-type> <server-name> [opt=val ...]');
+		star-gazer add <server-type> <server-name> [opt=val ...]\n\
+		star-gazer remove <server-name>\n');
 } else {
 	var command = process.argv[2];
 	if (command === 'init') {
@@ -152,6 +164,9 @@ if (process.argv.length < 3) {
 		} else {
 			console.error("error: no such server type registered '" + server_type + "'");
 		}
+
+	} else if (command === 'remove') {
+		remove_credentials(process.argv[3]);
 
 	} else {
 		console.log("unknown command: " + command);
