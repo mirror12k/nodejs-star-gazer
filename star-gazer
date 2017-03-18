@@ -13,10 +13,10 @@ function StarGazer() {
 
 	this.plugins = {};
 
-	this.register_command('list', 0, this.list_credentials.bind(this));
-	this.register_command('connect', 1, this.open_connection.bind(this));
-	this.register_command('add', 2, this.command_add_credentials.bind(this));
-	this.register_command('remove', 1, this.command_remove_credentials.bind(this));
+	this.register_command('list', [], this.list_credentials.bind(this));
+	this.register_command('connect', ['server name'], this.open_connection.bind(this));
+	this.register_command('add', ['server type', 'server name'], this.command_add_credentials.bind(this));
+	this.register_command('remove', ['server name'], this.command_remove_credentials.bind(this));
 }
 
 StarGazer.prototype.load_plugins = function() {
@@ -37,8 +37,8 @@ StarGazer.prototype.register_server_type = function(server_type, server_class) {
 	this.server_types[server_type] = server_class;
 };
 
-StarGazer.prototype.register_command = function(command_name, arg_count, callback) {
-	this.commands[command_name] = { arg_count: arg_count, callback: callback };
+StarGazer.prototype.register_command = function(command_name, arguments, callback) {
+	this.commands[command_name] = { arguments: arguments, callback: callback };
 };
 
 StarGazer.prototype.parse_opts = function(opts) {
@@ -53,9 +53,20 @@ StarGazer.prototype.parse_opts = function(opts) {
 	return parsed_opts;
 };
 
+StarGazer.prototype.list_commands = function() {
+	for (var command in this.commands) {
+		var description = command;
+		for (var i = 0; i < this.commands[command].arguments.length; i++) {
+			description += " <" + this.commands[command].arguments[i] + ">";
+		}
+		description += " [opt=value ...]";
+		console.log("\t\t" + description);
+	}
+};
+
 StarGazer.prototype.run_command = function(command, args) {
 	if (this.commands[command] !== undefined) {
-		var arg_count = this.commands[command].arg_count;
+		var arg_count = this.commands[command].arguments.length;
 		var command_args = args.slice(0, arg_count);
 		var opts = this.parse_opts(args.slice(arg_count));
 		command_args[arg_count] = opts;
@@ -88,7 +99,7 @@ StarGazer.prototype.command_add_credentials = function (server_type, server_name
 	if (gazer.server_types[server_type] !== undefined) {
 		opts.server_type = server_type;
 		var credentials = gazer.server_types[server_type].create_new(server_name, opts);
-		
+
 		if (credentials !== undefined && gazer.add_credentials(server_name, credentials)) {
 			gazer.store_config();
 			console.log('added credentials to store');
@@ -190,11 +201,8 @@ gazer.load_config();
 
 
 if (process.argv.length < 3) {
-	console.log('usage:\n\
-		star-gazer list\n\
-		star-gazer connect <server-name>\n\
-		star-gazer add <server-type> <server-name> [opt=val ...]\n\
-		star-gazer remove <server-name>\n');
+	console.log('usage:');
+	gazer.list_commands();
 } else {
 	gazer.run_command(process.argv[2], process.argv.slice(3));
 }
