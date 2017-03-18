@@ -1,22 +1,31 @@
 #!/usr/bin/env node
 
 var fs = require('fs');
+var crypto = require('crypto');
 
 var yaml = require('js-yaml');
+var read = require('read');
 
 
 
 function StarGazer() {
 	this.config_file = 'star-gazer-credentials.yaml';
-	this.server_types = {};
-	this.commands = {};
+	this.encrypted_config_file = 'star-gazer-credentials.yaml.aes';
+	this.config_encryption_algorithm = 'aes-256-ctr';
+
+	this.is_config_encrypted = undefined;
+	this.config_password = undefined;
 
 	this.plugins = {};
+	this.server_types = {};
+	this.commands = {};
 
 	this.register_command('list', [], this.list_credentials.bind(this));
 	this.register_command('connect', ['server name'], this.open_connection.bind(this));
 	this.register_command('add', ['server type', 'server name'], this.command_add_credentials.bind(this));
 	this.register_command('remove', ['server name'], this.command_remove_credentials.bind(this));
+	this.register_command('encrypt-config', [], this.command_encrypt_config.bind(this));
+	this.register_command('decrypt-config', [], this.command_decrypt_config.bind(this));
 }
 
 StarGazer.prototype.load_plugins = function() {
@@ -94,8 +103,7 @@ StarGazer.prototype.list_credentials = function () {
 };
 
 StarGazer.prototype.command_add_credentials = function (server_type, server_name, opts) {
-	console.log("got credentials: %j", opts);
-	
+	// console.log("got credentials: %j", opts);
 	if (gazer.server_types[server_type] !== undefined) {
 		opts.server_type = server_type;
 		var credentials = gazer.server_types[server_type].create_new(server_name, opts);
@@ -115,45 +123,117 @@ StarGazer.prototype.command_remove_credentials = function (server_name) {
 	if (this.remove_credentials(server_name)) {
 		this.store_config();
 		console.log("removed credentials from store");
-
 	}
 };
 
-StarGazer.prototype.load_config = function(filepath) {
-	// defaults to using .config_file as the filepath
-	if (filepath === undefined)
-		filepath = this.config_file;
-	
-	// load the config file
-	var config_data;
-	if (fs.existsSync(filepath)) {
-		config_data = yaml.safeLoad(fs.readFileSync(filepath, 'utf8'));
+StarGazer.prototype.command_encrypt_config = function() {
+	if (!this.is_config_encrypted) {
+		this.get_user_config_password(this.encrypt_config_file.bind(this));
 	} else {
-		console.log("warning: no config file found at '" + filepath + "'");
-		config_data = { credentials: {} };
-	}
-
-	// instantiate all credentials classes
-	this.config = { credentials: {} };
-	for (var server_name in config_data.credentials) {
-		var data = config_data.credentials[server_name];
-		this.config.credentials[server_name] = this.server_types[data.server_type].from_store(server_name, data);
+		console.error("error: config is already encrypted");
 	}
 };
 
-StarGazer.prototype.store_config = function(filepath) {
-	// defaults to using .config_file as the filepath
-	if (filepath === undefined)
-		filepath = this.config_file;
+StarGazer.prototype.command_decrypt_config = function() {
+	if (this.is_config_encrypted) {
+		this.decrypt_config_file();
+	} else {
+		console.error("error: config is not encrypted");
+	}
+};
+
+
+
+StarGazer.prototype.encrypt_text = function (plaintext) {
+	var cipher = crypto.createCipher(this.config_encryption_algorithm, this.config_password);
+	var ciphertext = cipher.update(plaintext, 'utf8', 'base64');
+	ciphertext += cipher.final('base64');
+	return ciphertext;
+}
+
+StarGazer.prototype.decrypt_text = function (ciphertext) {
+	var decipher = crypto.createDecipher(this.config_encryption_algorithm, this.config_password);
+	var plaintext = decipher.update(ciphertext, 'base64', 'utf8');
+	plaintext += decipher.final('utf8');
+	return plaintext;
+}
+
+StarGazer.prototype.get_user_config_password = function(callback) {
+	var self = this;
+	read({ prompt: 'password: ', silent: true }, function(er, password) {
+		self.config_password = password;
+		callback();
+	});
+};
+
+StarGazer.prototype.encrypt_config_file = function() {
+	this.is_config_encrypted = true;
+	this.store_config();
+	fs.unlinkSync(this.config_file);
+};
+
+StarGazer.prototype.decrypt_config_file = function() {
+	this.is_config_encrypted = false;
+	this.store_config();
+	fs.unlinkSync(this.encrypted_config_file);
+};
+
+StarGazer.prototype.load_config = function(callback) {
+	// load the config file
+	if (fs.existsSync(this.config_file)) {
+		this.is_config_encrypted = false;
+		var config_data = yaml.safeLoad(fs.readFileSync(this.config_file, 'utf8'));
+		callback(this.instantiate_config(config_data));
+	} else if (fs.existsSync(this.encrypted_config_file)) {
+		this.is_config_encrypted = true;
+		var self = this;
+		this.get_user_config_password(function () {
+			var data = fs.readFileSync(self.encrypted_config_file, 'ascii');
+			data = self.decrypt_text(data, self.config_password);
+			var config_data = yaml.safeLoad(data);
+			callback(self.instantiate_config(config_data));
+		});
+	} else {
+		console.log("warning: no config file found at '" + this.config_file + "'");
+		var config_data = { 'credentials-manager': 'star-gazer', credentials: {} };
+		callback(this.instantiate_config(config_data));
+	}
+};
+
+StarGazer.prototype.instantiate_config = function(config_data) {
+	if (config_data['credentials-manager'] === 'star-gazer') {
+		// instantiate all credentials classes
+		this.config = { 'credentials-manager': config_data['credentials-manager'], credentials: {} };
+		for (var server_name in config_data.credentials) {
+			var data = config_data.credentials[server_name];
+			this.config.credentials[server_name] = this.server_types[data.server_type].from_store(server_name, data);
+		}
+
+		return true;
+	} else {
+		console.error("error: malformed config (missing credentials-manager field)");
+		console.error("\t(maybe you misspelled your password?)");
+
+		return false;
+	}
+};
+
+StarGazer.prototype.store_config = function() {
 
 	// serialize all the credentials back into a js object
-	var config_data = { credentials: {} };
+	var config_data = { 'credentials-manager': this.config['credentials-manager'], credentials: {} };
 	for (var server_name in this.config.credentials) {
 		config_data.credentials[server_name] = this.config.credentials[server_name].to_store();
 	}
 
 	// write the config file
-	fs.writeFileSync(filepath, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+	if (this.is_config_encrypted) {
+		var data = yaml.safeDump(config_data);
+		data = this.encrypt_text(data);
+		fs.writeFileSync(this.encrypted_config_file, data, { 'encoding': 'ascii' });
+	} else {
+		fs.writeFileSync(this.config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+	}
 };
 
 
@@ -194,17 +274,25 @@ StarGazer.prototype.remove_credentials = function (server_name) {
 }
 
 
+if (require.main === module) {
+	var gazer = new StarGazer();
+	gazer.load_plugins();
 
-var gazer = new StarGazer();
-gazer.load_plugins();
-gazer.load_config();
+	if (process.argv.length < 3) {
+		console.log('usage:');
+		gazer.list_commands();
+	} else {
+		gazer.load_config(function (success) {
+			if (success) {
+				gazer.run_command(process.argv[2], process.argv.slice(3));
+			}
+		});
+	}
 
 
-if (process.argv.length < 3) {
-	console.log('usage:');
-	gazer.list_commands();
 } else {
-	gazer.run_command(process.argv[2], process.argv.slice(3));
+	module.exports = StarGazer;
 }
+
 
 

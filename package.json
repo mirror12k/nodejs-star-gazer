@@ -4,6 +4,7 @@
   
   "dependencies" : {
     "ssh2" : "*",
-    "js-yaml" : "*"
+    "js-yaml" : "*",
+    "read" : "*"
   }
 }
