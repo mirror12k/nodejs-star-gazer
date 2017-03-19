@@ -296,6 +296,7 @@ StarGazer.prototype.remove_credentials = function (server_name) {
 }
 
 
+
 if (require.main === module) {
 	var gazer = new StarGazer();
 	gazer.load_plugins();
@@ -312,9 +313,8 @@ if (require.main === module) {
 	}
 
 
-} else {
-	module.exports = StarGazer;
 }
 
 
 
+module.exports = StarGazer;
