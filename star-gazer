@@ -241,10 +241,7 @@ StarGazer.prototype.instantiate_config = function(config_data) {
 StarGazer.prototype.store_config = function() {
 
 	// serialize all the credentials back into a js object
-	var config_data = { 'credentials-manager': this.config['credentials-manager'], credentials: {} };
-	for (var server_name in this.config.credentials) {
-		config_data.credentials[server_name] = this.config.credentials[server_name].to_store();
-	}
+	var config_data = this.serialize_config();
 
 	// write the config file
 	if (this.is_config_encrypted) {
@@ -258,6 +255,15 @@ StarGazer.prototype.store_config = function() {
 	}
 };
 
+
+// serialize all the credentials into a js object for storage
+StarGazer.prototype.serialize_config = function() {
+	var config_data = { 'credentials-manager': this.config['credentials-manager'], credentials: {} };
+	for (var server_name in this.config.credentials) {
+		config_data.credentials[server_name] = this.config.credentials[server_name].to_store();
+	}
+	return config_data;
+};
 
 
 

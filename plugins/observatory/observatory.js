@@ -8,7 +8,7 @@ var observatory = {
 	command_observatory: function (gazer) {
 		var app = server.spawn_app();
 		var observatory_server = server.start_server(app);
-		var socketio_server = server.start_socketio_server(observatory_server);
+		var socketio_server = server.start_socketio_server(gazer, observatory_server);
 	},
 };
 

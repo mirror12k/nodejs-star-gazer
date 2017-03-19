@@ -10,7 +10,7 @@ var bodyParser = require('body-parser');
 var socketio = require('socket.io');
 
 var index = require('./routes/index');
-// var users = require('./routes/users');
+var ObservatoryRuntime = require('./runtime');
 
 
 
@@ -108,17 +108,11 @@ module.exports = {
 		return server;
 	},
 
-	start_socketio_server: function (httpServer) {
+	start_socketio_server: function (gazer, httpServer) {
 		var server = socketio.listen(httpServer);
-		server.sockets.on('connection', onSocketIOConnection);
 
-		function onSocketIOConnection(socket) {
-			console.log('got client connection');
-			socket.on('authenticate', function (data) {
-				console.log('got authentication from client: %j', data);
-			});
-		}
-
+		new ObservatoryRuntime(gazer, server);
+		
 		return server;
 	},
 

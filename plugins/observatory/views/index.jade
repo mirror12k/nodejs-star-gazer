@@ -2,7 +2,10 @@ extends layout
 
 block scripts
 	script(type='text/javascript', src='/socket.io/socket.io.js')
+	script(type='text/javascript', src='/js/jquery.min.js')
+	script(type='text/javascript', src='/js/observatory.js')
 
 block content
 	div#main
 		p hello world
+	div#server-list

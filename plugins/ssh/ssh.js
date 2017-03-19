@@ -77,6 +77,31 @@ SSHCredentials.prototype.open_connection = function () {
 	});
 };
 
+SSHCredentials.prototype.get_uptime = function(callback) {
+	var conn = new ssh2.Client();
+	conn.on('ready', function() {
+		conn.exec('uptime', function(err, stream) {
+			if (err) throw err;
+			var output = '';
+			stream.on('close', function(code, signal) {
+				// console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+				conn.end();
+				callback(output);
+			}).on('data', function(data) {
+				output += data;
+			}).stderr.on('data', function(data) {
+				console.log('STDERR: ' + data);
+			});
+		});
+	}).connect({
+		host: this.credentials.host,
+		port: this.credentials.port,
+		username: this.credentials.username,
+		password: this.credentials.password,
+		// privateKey: require('fs').readFileSync('/here/is/my/key')
+	});
+};
+
 
 
 module.exports = SSHCredentials;
