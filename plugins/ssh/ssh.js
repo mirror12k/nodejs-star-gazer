@@ -117,6 +117,26 @@ SSHCredentials.prototype.open_connection = function (callback) {
 	});
 };
 
+SSHCredentials.prototype.set_fields = function(opts) {
+	for (var opt_name in opts) {
+		if (opt_name.startsWith('x-')) {
+			if (opts[opt_name] === '') {
+				delete this.credentials[opt_name];
+			} else {
+				this.credentials[opt_name] = opts[opt_name];
+			}
+		} else if (opt_name === 'host' || opt_name === 'username' || opt_name === 'password') {
+			this.credentials[opt_name] = opts[opt_name];
+		} else if (opt_name === 'port') {
+			this.credentials[opt_name] = parseInt(opts[opt_name], 10);
+		} else {
+			console.error("invalid field for SSHCredentials: '" + opt_name + "'");
+			return false;
+		}
+	}
+	return true;
+};
+
 
 
 module.exports = SSHCredentials;
