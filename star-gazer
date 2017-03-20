@@ -22,7 +22,7 @@ function StarGazer() {
 	this.commands = {};
 
 	this.register_command('list', [], this.list_credentials.bind(this));
-	this.register_command('connect', ['server name'], this.open_connection.bind(this));
+	this.register_command('shell', ['server name'], this.command_shell.bind(this));
 	this.register_command('add', ['server type', 'server name'], this.command_add_credentials.bind(this));
 	this.register_command('remove', ['server name'], this.command_remove_credentials.bind(this));
 	this.register_command('encrypt-config', [], this.command_encrypt_config.bind(this));
@@ -141,6 +141,12 @@ StarGazer.prototype.command_decrypt_config = function() {
 	} else {
 		console.error("error: config is not encrypted");
 	}
+};
+
+StarGazer.prototype.command_shell = function(server_name) {
+	this.open_connection(server_name, function (conn) {
+		conn.start_shell();
+	});
 };
 
 
@@ -271,15 +277,15 @@ StarGazer.prototype.get_credentials = function (server_name) {
 	return this.config.credentials[server_name];
 };
 
-StarGazer.prototype.open_connection = function (server_name) {
+StarGazer.prototype.open_connection = function (server_name, callback) {
 	var credentials = this.get_credentials(server_name);
 	if (credentials !== undefined) {
 		console.log('connecting to ' + server_name + '...');
-		credentials.open_connection();
+		credentials.open_connection(callback);
 	} else {
 		console.error("error: no credentials found for '" + server_name + "', use the list command to view your existing credentials");
 	}
-}
+};
 
 StarGazer.prototype.add_credentials = function (server_name, credentials) {
 	if (this.get_credentials(server_name) !== undefined) {
@@ -289,7 +295,7 @@ StarGazer.prototype.add_credentials = function (server_name, credentials) {
 
 	this.config.credentials[server_name] = credentials;
 	return true;
-}
+};
 
 StarGazer.prototype.remove_credentials = function (server_name) {
 	if (this.get_credentials(server_name) === undefined) {
@@ -299,7 +305,7 @@ StarGazer.prototype.remove_credentials = function (server_name) {
 
 	delete this.config.credentials[server_name];
 	return true;
-}
+};
 
 
 
