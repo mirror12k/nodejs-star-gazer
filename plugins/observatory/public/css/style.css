@@ -22,6 +22,7 @@ html, body {
 
 .server-entry {
 	width: auto;
+	padding: 10px;
 	padding-left: 15px;
 	padding-right: 15px;
 	border: 1px solid black;

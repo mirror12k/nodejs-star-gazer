@@ -25,14 +25,14 @@ ObservatoryClient.prototype.reload_server_list = function() {
 		for (var server_name in this.config.credentials) {
 			if (this.server_state[server_name]) {
 				$('#server-list').append(
-					'<div class="server-entry server-up"><p>'
+					'<div class="server-entry server-up">'
 					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
-					+ this.server_state[server_name] + '</p></div>');
+					+ this.server_state[server_name] + '</div>');
 			} else {
 				$('#server-list').append(
-					'<div class="server-entry server-down"><p>'
+					'<div class="server-entry server-down">'
 					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
-					+ '---' + '</p></div>');
+					+ '---' + '</div>');
 			}
 		}
 	}
