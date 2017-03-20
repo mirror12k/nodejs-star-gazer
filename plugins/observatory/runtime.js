@@ -24,18 +24,33 @@ ObservatoryRuntime.prototype.queryServerState = function () {
 	for (var server_name in this.gazer.config.credentials) {
 		newServerState[server_name] = undefined;
 
+		var status_command = this.gazer.config.credentials[server_name].default_status_command;
 		if (this.server_connections[server_name]) {
-			this.server_connections[server_name].get_uptime((function (server_name, data) {
-				console.log("" + server_name + ": " + data);
-				newServerState[server_name] = data;
+			this.server_connections[server_name].exec_command(status_command, (function (server_name, err, data) {
+				if (err) {
+					self.server_connections[server_name] = undefined;
+					console.error("connection error: " + err);
+				} else {
+					// console.log("" + server_name + ": " + data);
+					newServerState[server_name] = data;
+				}
 			}).bind(undefined, server_name));
 		} else {
-			this.gazer.config.credentials[server_name].open_connection((function (server_name, conn) {
-				self.server_connections[server_name] = conn;
-				conn.get_uptime(function (data) {
-					console.log("" + server_name + ": " + data);
-					newServerState[server_name] = data;
-				});
+			this.gazer.config.credentials[server_name].open_connection((function (server_name, err, conn) {
+				if (conn) {
+					self.server_connections[server_name] = conn;
+					conn.exec_command(status_command, function (err, data) {
+						if (err) {
+							self.server_connections[server_name] = undefined;
+							console.error("connection error: " + err);
+						} else {
+							// console.log("" + server_name + ": " + data);
+							newServerState[server_name] = data;
+						}
+					});
+				} else {
+					// console.error('got error: ' + err);
+				}
 			}).bind(undefined, server_name));
 		}
 

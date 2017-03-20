@@ -144,8 +144,12 @@ StarGazer.prototype.command_decrypt_config = function() {
 };
 
 StarGazer.prototype.command_shell = function(server_name) {
-	this.open_connection(server_name, function (conn) {
-		conn.start_shell();
+	this.open_connection(server_name, function (err, conn) {
+		if (conn) {
+			conn.start_shell();
+		} else {
+			console.error("got error: " + err);
+		}
 	});
 };
 

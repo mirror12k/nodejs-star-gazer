@@ -4,10 +4,16 @@ var ssh2 = require('ssh2');
 
 function SSHConnection(connection) {
 	this.connection = connection;
+	this.connection_closed = false;
+	this.connection.on('close', this.on_close.bind(this));
 }
 
 SSHConnection.prototype.start_shell = function() {
 	var self = this;
+
+	if (this.connection_closed)
+		return callback(new Error("connection is already closed"));
+	
 	this.connection.shell(function(err, stream) {
 		if (err) throw err;
 
@@ -22,14 +28,18 @@ SSHConnection.prototype.start_shell = function() {
 	});
 };
 
-SSHConnection.prototype.get_uptime = function(callback) {
-	this.connection.exec('uptime', function(err, stream) {
-		if (err) throw err;
+SSHConnection.prototype.exec_command = function(command, callback) {
+	if (this.connection_closed)
+		return callback(new Error("connection is already closed"));
+
+	this.connection.exec(command, function(err, stream) {
+		if (err)
+			return callback(err);
 		var output = '';
 		stream.on('close', function(code, signal) {
 			// // console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
 			// conn.end();
-			callback(output);
+			callback(undefined, output);
 		}).on('data', function(data) {
 			output += data;
 		}).stderr.on('data', function(data) {
@@ -38,11 +48,16 @@ SSHConnection.prototype.get_uptime = function(callback) {
 	});
 };
 
+SSHConnection.prototype.on_close = function() {
+	this.connection_closed = true;
+};
+
 
 function SSHCredentials(server_name, credentials) {
 	this.server_type = 'ssh';
 	this.server_name = server_name;
 	this.credentials = credentials;
+	this.default_status_command = 'uptime';
 }
 
 // hook to register the server type
@@ -90,8 +105,9 @@ SSHCredentials.prototype.print_info = function() {
 SSHCredentials.prototype.open_connection = function (callback) {
 	var conn = new ssh2.Client();
 	conn.on('ready', function() {
-		console.log('connected!');
-		callback(new SSHConnection(conn));
+		callback(undefined, new SSHConnection(conn));
+	}).on('error', function (err) {
+		callback(err);
 	}).connect({
 		host: this.credentials.host,
 		port: this.credentials.port,
@@ -100,31 +116,6 @@ SSHCredentials.prototype.open_connection = function (callback) {
 		// privateKey: require('fs').readFileSync('/here/is/my/key')
 	});
 };
-
-// SSHCredentials.prototype.get_uptime = function(callback) {
-// 	var conn = new ssh2.Client();
-// 	conn.on('ready', function() {
-// 		conn.exec('uptime', function(err, stream) {
-// 			if (err) throw err;
-// 			var output = '';
-// 			stream.on('close', function(code, signal) {
-// 				// console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-// 				conn.end();
-// 				callback(output);
-// 			}).on('data', function(data) {
-// 				output += data;
-// 			}).stderr.on('data', function(data) {
-// 				console.log('STDERR: ' + data);
-// 			});
-// 		});
-// 	}).connect({
-// 		host: this.credentials.host,
-// 		port: this.credentials.port,
-// 		username: this.credentials.username,
-// 		password: this.credentials.password,
-// 		// privateKey: require('fs').readFileSync('/here/is/my/key')
-// 	});
-// };
 
 
 

@@ -1,6 +1,7 @@
 
 // code taken from a standard express project
 
+var http = require('http');
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -57,7 +58,6 @@ module.exports = {
 	},
 	start_server: function (app) {
 		var debug = require('debug')('star-gazer-observatory:server');
-		var http = require('http');
 
 		var port = normalizePort(process.env.PORT || '3000');
 		app.set('port', port);
