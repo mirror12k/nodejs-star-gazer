@@ -26,12 +26,12 @@ ObservatoryClient.prototype.reload_server_list = function() {
 			if (this.server_state[server_name]) {
 				$('#server-list').append(
 					'<div class="server-entry server-up"><p>'
-					+ '[[' + escape_html(server_name) + ']]: '
+					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
 					+ this.server_state[server_name] + '</p></div>');
 			} else {
 				$('#server-list').append(
 					'<div class="server-entry server-down"><p>'
-					+ '[[' + escape_html(server_name) + ']]: '
+					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
 					+ '---' + '</p></div>');
 			}
 		}

@@ -1,18 +1,46 @@
 
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+#content {
+	height: 100%;
+	background-color: #EEF;
+}
+
+#server-list-container {
+	padding: 40px;
+}
+
+#server-list {
+	background-color: #DDF;
+	border-radius: 30px;
+	border: 20px solid #CCF;
+}
+
 .server-entry {
 	width: auto;
 	padding-left: 15px;
 	padding-right: 15px;
 	border: 1px solid black;
 	border-radius: 8px;
+	font-family: Consolas, monaco, monospace;
 }
 
 .server-up {
-	border: 4px solid #668866;
-	background-color: #66CC66;
+	border: 4px solid #686;
+	background-color: #6C6;
 }
 
 .server-down {
-	border: 4px solid #882222;
-	background-color: #CC4444;
+	border: 4px solid #822;
+	background-color: #C44;
+}
+
+.server-name {
+	border-radius: 10px;
+	background-color: #FFA;
+	padding: 8px;
 }
