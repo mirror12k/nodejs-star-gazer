@@ -10,5 +10,10 @@ block scripts
 
 
 block content
-	div#server-list-container
-		div#server-list
+	ul.nav.nav-tabs(role='tablist')
+		li.active
+			a(href='#main-tab', role='tab', data-toggle='tab') main
+	div.tab-content
+		div.tab-pane.active#main-tab
+			div#server-list-container
+				div#server-list

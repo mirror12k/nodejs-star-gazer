@@ -6,6 +6,7 @@ function escape_html(s) {
 }
 
 function ObservatoryClient() {
+	this.console_counter = 0;
 	this.start_client_connection();
 }
 
@@ -47,6 +48,9 @@ ObservatoryClient.prototype.start_client_connection = function () {
 }
 
 ObservatoryClient.prototype.open_console = function (server_name) {
+	var console_id = this.console_counter++;
+	$('ul.nav.nav-tabs').append('<li><a role="tab" data-toggle="tab" href="#console-tab-' + console_id + '">' + escape_html(server_name) + '</a></li>');
+	$('div.tab-content').append('<div class="tab-pane" id="console-tab-' + console_id + '"></div>');
 	this.socket.emit('start_console', server_name);
 }
 
