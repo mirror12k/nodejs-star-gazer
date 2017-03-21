@@ -10,8 +10,10 @@ function ObservatoryRuntime(gazer, sockio_server) {
 }
 
 ObservatoryRuntime.prototype.	on_connection = function (socket) {
+	socket.active_consoles = {};
 	socket.emit('star-gazer-config', this.gazer.serialize_config());
-	socket.on('start_console', this.start_console.bind(this, socket));
+	socket.on('start-console', this.start_console.bind(this, socket));
+	socket.on('console-input', this.on_console_input.bind(this, socket));
 };
 
 ObservatoryRuntime.prototype.query_server_state = function () {
@@ -58,8 +60,26 @@ ObservatoryRuntime.prototype.query_server_state = function () {
 	}
 };
 
-ObservatoryRuntime.prototype.start_console = function(socket, server_name) {
-	console.log("request for a console to server", server_name);
+ObservatoryRuntime.prototype.start_console = function(socket, console_data) {
+	console.log("request for a console to server", console_data.server_name);
+	this.gazer.config.credentials[console_data.server_name].open_connection(function (err, conn) {
+		conn.start_shell(function (err, shell) {
+			shell.on('data', function (data) {
+				console.log('got output for console id', console_data.console_id, data);
+				socket.emit('console-output', { console_id: console_data.console_id, text: data.toString() });
+			});
+			socket.active_consoles[console_data.console_id] = shell;
+		});
+	});
+};
+
+ObservatoryRuntime.prototype.on_console_input = function(socket, data) {
+	if (socket.active_consoles[data.console_id]) {
+		console.log("got input for console id", data.console_id, ":", data.text);
+		socket.active_consoles[data.console_id].write(data.text + "\n");
+	} else {
+		console.log("got input for invalid console id", data.console_id);
+	}
 };
 
 

@@ -45,14 +45,39 @@ ObservatoryClient.prototype.start_client_connection = function () {
 	this.socket = io.connect('/');
 	this.socket.on('star-gazer-config', this.on_config.bind(this));
 	this.socket.on('server-state', this.on_server_state.bind(this));
-}
+	this.socket.on('console-output', this.on_console_output.bind(this));
+};
 
 ObservatoryClient.prototype.open_console = function (server_name) {
 	var console_id = this.console_counter++;
+	var console_dom = $('<div class="tab-pane" id="console-tab-' + console_id + '">'
+		+ '<textarea class="console-output"></textarea>'
+		+ '<input type="text" class="console-input"></input>'
+		+ '</div>');
+
+	console_dom.find('.console-input').keyup((function(e) {
+		var code = (e.keyCode ? e.keyCode : e.which);
+		if (code == 13) {
+			var input = e.target.value;
+			e.target.value = '';
+			this.on_console_input(console_id, input);
+		}
+	}).bind(this));
+
 	$('ul.nav.nav-tabs').append('<li><a role="tab" data-toggle="tab" href="#console-tab-' + console_id + '">' + escape_html(server_name) + '</a></li>');
-	$('div.tab-content').append('<div class="tab-pane" id="console-tab-' + console_id + '"></div>');
-	this.socket.emit('start_console', server_name);
-}
+	$('div.tab-content').append(console_dom);
+	this.socket.emit('start-console', { server_name: server_name, console_id: console_id });
+};
+
+ObservatoryClient.prototype.on_console_input = function(console_id, text) {
+	this.socket.emit('console-input', { console_id: console_id, text: text });
+};
+
+ObservatoryClient.prototype.on_console_output = function(data) {
+	console.log("debug console-output: ", data);
+	var panel = $('#console-tab-' + data.console_id + ' .console-output').append(data.text);
+};
+
 
 
 $(function () {
