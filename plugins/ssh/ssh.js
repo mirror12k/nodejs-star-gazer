@@ -8,24 +8,29 @@ function SSHConnection(connection) {
 	this.connection.on('close', this.on_close.bind(this));
 }
 
-SSHConnection.prototype.start_shell = function() {
+SSHConnection.prototype.start_shell = function(callback) {
 	var self = this;
 
 	if (this.connection_closed)
 		return callback(new Error("connection is already closed"));
 	
-	this.connection.shell(function(err, stream) {
-		if (err) throw err;
+	this.connection.shell(callback);
+	// function(err, stream) {
+	// 	if (err)
+	// 		callback(err);
+	// 	stream.pipe(process.stdout);
+	// 	process.stdin.pipe(stream);
 
-		stream.pipe(process.stdout);
-		process.stdin.pipe(stream);
+	// 	stream.on('close', function() {
+	// 		console.log('stream closed');
+	// 		self.connection.end();
+	// 		process.exit(0);
+	// 	});
+	// }
+};
 
-		stream.on('close', function() {
-			console.log('stream closed');
-			self.connection.end();
-			process.exit(0);
-		});
-	});
+SSHConnection.prototype.end = function() {
+	this.connection.end();
 };
 
 SSHConnection.prototype.exec_command = function(command, callback) {

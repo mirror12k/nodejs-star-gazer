@@ -152,9 +152,23 @@ StarGazer.prototype.command_decrypt_config = function() {
 };
 
 StarGazer.prototype.command_shell = function(server_name) {
+	var self = this;
 	this.open_connection(server_name, function (err, conn) {
 		if (conn) {
-			conn.start_shell();
+			conn.start_shell(function (err, stream) {
+				if (err)
+					throw err;
+
+				stream.pipe(process.stdout);
+				process.stdin.pipe(stream);
+
+				stream.on('close', function() {
+					console.log('stream closed');
+					conn.end();
+					process.stdin.end();
+					// process.exit(0);
+				});
+			});
 		} else {
 			console.error("got error: " + err);
 		}
@@ -262,14 +276,14 @@ StarGazer.prototype.store_config = function() {
 	var config_data = this.serialize_config();
 
 	// write the config file
+	var data = yaml.safeDump(config_data);
 	if (this.is_config_encrypted) {
-		var data = yaml.safeDump(config_data);
-		ciphertext = this.encrypt_text(data);
+		var ciphertext = this.encrypt_text(data);
 		var mac = this.mac_text(ciphertext);
 		var file_data = ciphertext + "|" + mac;
 		fs.writeFileSync(this.encrypted_config_file, file_data, { 'encoding': 'ascii' });
 	} else {
-		fs.writeFileSync(this.config_file, yaml.safeDump(config_data), { 'encoding': 'utf8' });
+		fs.writeFileSync(this.config_file, data, { 'encoding': 'utf8' });
 	}
 };
 
