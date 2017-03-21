@@ -6,7 +6,7 @@ function escape_html(s) {
 }
 
 function ObservatoryClient() {
-	this.startClientConnection();
+	this.start_client_connection();
 }
 
 ObservatoryClient.prototype.on_config = function(config) {
@@ -24,24 +24,30 @@ ObservatoryClient.prototype.reload_server_list = function() {
 	if (this.config) {
 		for (var server_name in this.config.credentials) {
 			if (this.server_state[server_name]) {
-				$('#server-list').append(
-					'<div class="server-entry server-up">'
+				var entry = $('<div class="server-entry server-up">'
+					+ '<span class="glyphicon glyphicon-list-alt console-button"></span>'
 					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
 					+ this.server_state[server_name] + '</div>');
+				entry.find('.console-button').click(this.open_console.bind(this, server_name));
+				$('#server-list').append(entry);
 			} else {
-				$('#server-list').append(
-					'<div class="server-entry server-down">'
+				var entry = $('<div class="server-entry server-down">'
 					+ '<span class="server-name">' + escape_html(server_name) + '</span> : '
 					+ '---' + '</div>');
+				$('#server-list').append(entry);
 			}
 		}
 	}
 };
 
-ObservatoryClient.prototype.startClientConnection = function () {
+ObservatoryClient.prototype.start_client_connection = function () {
 	this.socket = io.connect('/');
 	this.socket.on('star-gazer-config', this.on_config.bind(this));
 	this.socket.on('server-state', this.on_server_state.bind(this));
+}
+
+ObservatoryClient.prototype.open_console = function (server_name) {
+	this.socket.emit('start_console', server_name);
 }
 
 

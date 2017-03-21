@@ -15,18 +15,6 @@ SSHConnection.prototype.start_shell = function(callback) {
 		return callback(new Error("connection is already closed"));
 	
 	this.connection.shell(callback);
-	// function(err, stream) {
-	// 	if (err)
-	// 		callback(err);
-	// 	stream.pipe(process.stdout);
-	// 	process.stdin.pipe(stream);
-
-	// 	stream.on('close', function() {
-	// 		console.log('stream closed');
-	// 		self.connection.end();
-	// 		process.exit(0);
-	// 	});
-	// }
 };
 
 SSHConnection.prototype.end = function() {

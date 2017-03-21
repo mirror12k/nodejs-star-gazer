@@ -45,3 +45,10 @@ html, body {
 	background-color: #FFA;
 	padding: 8px;
 }
+
+.console-button {
+	padding: 8px;
+	border-radius: 10px;
+	background-color: #ACF;
+	margin-right: 6px;
+}
