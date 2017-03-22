@@ -51,7 +51,7 @@ ObservatoryClient.prototype.start_client_connection = function () {
 ObservatoryClient.prototype.open_console = function (server_name) {
 	var console_id = this.console_counter++;
 	var console_dom = $('<div class="tab-pane" id="console-tab-' + console_id + '">'
-		+ '<textarea class="console-output"></textarea>'
+		+ '<div class="console-output"></div>'
 		+ '<input type="text" class="console-input"></input>'
 		+ '</div>');
 
@@ -67,6 +67,7 @@ ObservatoryClient.prototype.open_console = function (server_name) {
 	$('ul.nav.nav-tabs').append('<li><a role="tab" data-toggle="tab" href="#console-tab-' + console_id + '">' + escape_html(server_name) + '</a></li>');
 	$('div.tab-content').append(console_dom);
 	this.socket.emit('start-console', { server_name: server_name, console_id: console_id });
+	$('a[href="#console-tab-' + console_id + '"]').tab('show');
 };
 
 ObservatoryClient.prototype.on_console_input = function(console_id, text) {
@@ -75,7 +76,10 @@ ObservatoryClient.prototype.on_console_input = function(console_id, text) {
 
 ObservatoryClient.prototype.on_console_output = function(data) {
 	console.log("debug console-output: ", data);
-	var panel = $('#console-tab-' + data.console_id + ' .console-output').append(data.text);
+	var text = data.text;
+	// text = escape_html(text);
+	text = text.split("\n").join("<br>");
+	var panel = $('#console-tab-' + data.console_id + ' .console-output').append(text);
 };
 
 

@@ -1,5 +1,5 @@
 
-// code taken from a standard express project
+// code mostly taken from a standard express project
 
 var http = require('http');
 var express = require('express');
@@ -112,7 +112,7 @@ module.exports = {
 		var server = socketio.listen(httpServer);
 
 		new ObservatoryRuntime(gazer, server);
-		
+
 		return server;
 	},
 
