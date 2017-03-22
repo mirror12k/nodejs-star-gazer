@@ -79,7 +79,9 @@ ObservatoryClient.prototype.on_console_output = function(data) {
 	var text = data.text;
 	// text = escape_html(text);
 	text = text.split("\n").join("<br>");
-	var panel = $('#console-tab-' + data.console_id + ' .console-output').append(text);
+	var panel = $('#console-tab-' + data.console_id + ' .console-output');
+	panel.append(text);
+	panel.scrollTop(panel[0].scrollHeight);
 };
 
 

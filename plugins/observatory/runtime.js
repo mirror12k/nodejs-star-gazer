@@ -65,7 +65,7 @@ ObservatoryRuntime.prototype.start_console = function(socket, console_data) {
 	this.gazer.config.credentials[console_data.server_name].open_connection(function (err, conn) {
 		conn.start_shell(function (err, shell) {
 			shell.on('data', function (data) {
-				console.log('got output for console id', console_data.console_id, data);
+				console.log('got output for console id', console_data.console_id, data.toString());
 				socket.emit('console-output', { console_id: console_data.console_id, text: data.toString() });
 			});
 			socket.active_consoles[console_data.console_id] = shell;

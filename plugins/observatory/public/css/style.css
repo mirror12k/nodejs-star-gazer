@@ -55,8 +55,9 @@ html, body {
 
 .console-output {
 	width: 100%;
-	height: auto;
-	
+	height: 400px;
+	overflow-y: auto;
+
 	background-color: #111;
 	border-radius: 20px;
 	border: 20px solid #333;
@@ -64,7 +65,7 @@ html, body {
 
 	color: #CC4;
 	font-family: Consolas, monaco, monospace;
-	font-weight: bold
+	font-weight: bold;
 }
 
 .console-input {
