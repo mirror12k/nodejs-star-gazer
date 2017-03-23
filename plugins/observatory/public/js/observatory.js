@@ -55,13 +55,30 @@ ObservatoryClient.prototype.open_console = function (server_name) {
 		+ '<input type="text" class="console-input"></input>'
 		+ '</div>');
 
-	console_dom.find('.console-input').keyup((function(e) {
-		var code = (e.keyCode ? e.keyCode : e.which);
-		if (code == 13) {
-			var input = e.target.value;
-			e.target.value = '';
-			this.on_console_input(console_id, input);
+	// console_dom.find('.console-input').keyup((function(e) {
+	// 	var code = (e.keyCode ? e.keyCode : e.which);
+	// 	if (code == 13) {
+	// 		var input = e.target.value;
+	// 		e.target.value = '';
+	// 		this.on_console_input(console_id, input);
+	// 	}
+	// }).bind(this));
+	console_dom.find('.console-input').keypress((function(e) {
+		e.preventDefault();
+		// var code = (e.keyCode ? e.keyCode : e.which);
+		// if (!e.shiftKey) {
+		// 	key = key.toLowerCase();
+		// } else {
+		// 	var key = String.fromCharCode(e.keyCode);
+		// }
+		console.log("debug: ", e.keyCode, e.shiftKey, e.key);
+		var key = e.key;
+		if (key === 'Backspace') {
+			key = "\b";
+		} else if (key === 'Enter') {
+			key = "\n";
 		}
+		this.on_console_input(console_id, key);
 	}).bind(this));
 
 	$('ul.nav.nav-tabs').append('<li><a role="tab" data-toggle="tab" href="#console-tab-' + console_id + '">' + escape_html(server_name) + '</a></li>');

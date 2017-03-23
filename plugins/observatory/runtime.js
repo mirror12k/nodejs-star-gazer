@@ -76,7 +76,7 @@ ObservatoryRuntime.prototype.start_console = function(socket, console_data) {
 ObservatoryRuntime.prototype.on_console_input = function(socket, data) {
 	if (socket.active_consoles[data.console_id]) {
 		console.log("got input for console id", data.console_id, ":", data.text);
-		socket.active_consoles[data.console_id].write(data.text + "\n");
+		socket.active_consoles[data.console_id].write(data.text);
 	} else {
 		console.log("got input for invalid console id", data.console_id);
 	}
