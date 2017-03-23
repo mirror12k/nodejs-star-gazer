@@ -5,6 +5,7 @@ var crypto = require('crypto');
 
 var yaml = require('js-yaml');
 var read = require('read');
+var tty = require('tty');
 
 
 
@@ -160,6 +161,7 @@ StarGazer.prototype.command_shell = function(server_name) {
 					throw err;
 
 				stream.pipe(process.stdout);
+				tty.setRawMode(true);
 				process.stdin.pipe(stream);
 
 				stream.on('close', function() {
